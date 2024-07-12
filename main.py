@@ -8,15 +8,17 @@
 
 import cv2
 import numpy as np
+import operator
 
-testImagePath = 'images/sudokuTest.jpg'
+testImagePath = 'images/sudokuTestEasy.png'
+# testImagePath = 'images/sudokuTestHard.jpg'
 height = 450
 width = 450
 
 # STEP 1: Preprocess image
 def preProcess(img):
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Convert to grayscale
-    imgBlur = cv2.GaussianBlur(imgGray, (9,9), 0) # Apply Gaussian blur
+    imgBlur = cv2.GaussianBlur(imgGray, (9,9), 0) # Apply Gaussian blur -> Remove noise
     imgThreshold = cv2.adaptiveThreshold(imgBlur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2) # Apply adaptive threshold -> Make everything black or white based on above or below threshold
     imgInv = cv2.bitwise_not(imgThreshold, 0) # Invert image -> Black background, white gridlines
     imgKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2)) # Get a rectangular kernel
@@ -27,26 +29,53 @@ def preProcess(img):
 
 # STEP 2: Find contours
 def findContours(img):
-    contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    # Find all contours, no hierarchy, simple approximation
+    contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
-# STEP 3: Find sudoku grid -> Find largest contour
-def getLargestContour(contours):
-    biggest = np.array([])
-    max_area = 0
+def find_extreme_corners(polygon, limit_fn, compare_fn):
+    # limit_fn is the min or max function
+    # compare_fn is the np.add or np.subtract function
+
+    # if we are trying to find bottom left corner, we know that it will have the smallest (x - y) value
+    section, _ = limit_fn(enumerate([compare_fn(pt[0][0], pt[0][1]) for pt in polygon]),
+                          key=operator.itemgetter(1))
+
+    return polygon[section][0][0], polygon[section][0][1]
+
+def draw_extreme_corners(pts, original):
+    cv2.circle(original, pts, 7, (0, 255, 0), cv2.FILLED)
+
+# STEP 3: Find sudoku grid corners -> Find largest square contour and get its corners
+def getSudokuGridCorners(contours):
+    gridCorners = None
+
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    
     for contour in contours:
         area = cv2.contourArea(contour)
-        if area > 50:
-            perimeter = cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, 0.02*perimeter, True)
-            if area > max_area and len(approx) == 4:
-                biggest = approx
-                max_area = area
+        perimeter = cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, 0.02*perimeter, True)
+        num_sides = len(approx)
 
-    print(f'Biggest contour: {biggest}')
-    print(f'Max area: {max_area}')
+        # If contour has 4 sides and area > 10000, it's likely the sudoku grid -> Check if it's a square to confirm
+        if num_sides == 4 and area > 100:
+            top_left = find_extreme_corners(contour, min, np.add)  # has smallest (x + y) value
+            top_right = find_extreme_corners(contour, max, np.subtract)  # has largest (x - y) value
+            bot_left = find_extreme_corners(contour, min, np.subtract)  # has smallest (x - y) value
+            bot_right = find_extreme_corners(contour, max, np.add)  # has largest (x + y) value
+            
+            # Check if the contour is a square -> 10% tolerance
+            if not (0.90 < ((top_right[0] - top_left[0]) / (bot_right[1] - top_right[1])) < 1.10):
+                continue
 
-    return biggest
+            gridCorners = [top_left, top_right, bot_right, bot_left]
+            break
+        
+    if gridCorners is None:
+        return []
+    
+    return gridCorners
 
 # Stack images for step by step visualization
 def stackImages(imgArray, scale):
@@ -98,9 +127,13 @@ def main():
     imgContours = img.copy()
     cv2.drawContours(imgContours, contours, -1, (0, 255, 0), 3)
 
-    biggest = getLargestContour(contours)
-    imgBiggest = img.copy()
-    cv2.drawContours(imgBiggest, biggest, -1, (0, 255, 0), 10)
+    corners = getSudokuGridCorners(contours)
+    # print(biggest)
+    imgCorners = img.copy()
+
+    for corner in corners:
+        draw_extreme_corners(corner, imgCorners)
+    # cv2.drawContours(imgBiggest, biggest, -1, (0, 255, 0), 10)
 
     imgArray = [img, imgProcessed, imgContours, imgBiggest]
     # imgStacked = stackImages(imgArray, 1)
