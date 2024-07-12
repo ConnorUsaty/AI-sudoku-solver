@@ -16,14 +16,37 @@ width = 450
 # STEP 1: Preprocess image
 def preProcess(img):
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Convert to grayscale
-    imgBlur = cv2.GaussianBlur(imgGray, (5, 5), 1) # Apply Gaussian blur
-    imgThreshold = cv2.adaptiveThreshold(imgBlur, 255, 1, 1, 11, 2) # Apply adaptive threshold
-    return imgThreshold
+    imgBlur = cv2.GaussianBlur(imgGray, (9,9), 0) # Apply Gaussian blur
+    imgThreshold = cv2.adaptiveThreshold(imgBlur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2) # Apply adaptive threshold -> Make everything black or white based on above or below threshold
+    imgInv = cv2.bitwise_not(imgThreshold, 0) # Invert image -> Black background, white gridlines
+    imgKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2)) # Get a rectangular kernel
+    imgMorph = cv2.morphologyEx(imgInv, cv2.MORPH_OPEN, imgKernel) # Apply morphological transformation
+    imgFinal = cv2.dilate(imgMorph, imgKernel, iterations=1) # Dilate image -> Fill in gaps and make lines bolder
+
+    return imgFinal
 
 # STEP 2: Find contours
 def findContours(img):
     contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return contours
+
+# STEP 3: Find sudoku grid -> Find largest contour
+def getLargestContour(contours):
+    biggest = np.array([])
+    max_area = 0
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > 50:
+            perimeter = cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, 0.02*perimeter, True)
+            if area > max_area and len(approx) == 4:
+                biggest = approx
+                max_area = area
+
+    print(f'Biggest contour: {biggest}')
+    print(f'Max area: {max_area}')
+
+    return biggest
 
 # Stack images for step by step visualization
 def stackImages(imgArray, scale):
@@ -68,15 +91,25 @@ def main():
     img = cv2.resize(img, (width, height))
 
     imgBlank = np.zeros((height, width, 3), np.uint8)
-    imgThreshold = preProcess(img)
-    contours = findContours(imgThreshold)
+
+    imgProcessed = preProcess(img)
+
+    contours = findContours(imgProcessed)
     imgContours = img.copy()
     cv2.drawContours(imgContours, contours, -1, (0, 255, 0), 3)
 
-    imgArray = [img, imgThreshold, imgContours, imgBlank]
-    imgStacked = stackImages(imgArray, 1)
+    biggest = getLargestContour(contours)
+    imgBiggest = img.copy()
+    cv2.drawContours(imgBiggest, biggest, -1, (0, 255, 0), 10)
 
-    cv2.imshow('Stacked Images', imgStacked)
+    imgArray = [img, imgProcessed, imgContours, imgBiggest]
+    # imgStacked = stackImages(imgArray, 1)
+
+    for img in imgArray:
+        cv2.imshow('Stacked Images', img)
+        cv2.waitKey(0)
+
+    # cv2.imshow('Stacked Images', imgStacked)
 
     cv2.waitKey(0)
 
