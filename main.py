@@ -30,7 +30,7 @@ def preProcess(img):
 # STEP 2: Find contours
 def findContours(img):
     # Find all contours, no hierarchy, simple approximation
-    contours, hierarchy = cv2.findContours(img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hierarchy = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
 def find_extreme_corners(polygon, limit_fn, compare_fn):
@@ -76,6 +76,28 @@ def getSudokuGridCorners(contours):
         return []
     
     return gridCorners
+
+# STEP 4: Crop to grid only
+def cropToGridOnly(img, corners):
+    pts1 = np.float32(corners)
+    pts2 = np.float32([[0,0], [width,0], [width,height], [0,height]])
+    matrix = cv2.getPerspectiveTransform(pts1, pts2)
+    imgWarp = cv2.warpPerspective(img, matrix, (width, height))
+
+    return imgWarp
+
+# STEP 5: Get grid boxes
+def getGridBoxes(img):
+    # Since img is cropped to grid only, each box should be approximately 1/9th of the image
+    boxes = []
+
+    rows = np.vsplit(img, 9)
+    for row in rows:
+        cols = np.hsplit(row, 9)
+        for col in cols:
+            boxes.append(col)
+
+    return boxes
 
 # Stack images for step by step visualization
 def stackImages(imgArray, scale):
@@ -135,7 +157,14 @@ def main():
         draw_extreme_corners(corner, imgCorners)
     # cv2.drawContours(imgBiggest, biggest, -1, (0, 255, 0), 10)
 
-    imgArray = [img, imgProcessed, imgContours, imgBiggest]
+    imgGridDisplay = cropToGridOnly(img, corners)
+
+    imgGrid = imgGridDisplay.copy()
+    imgGrid = cv2.cvtColor(imgGrid, cv2.COLOR_BGR2GRAY)
+
+    boxes = getGridBoxes(imgGrid)
+
+    imgArray = [img, imgProcessed, imgContours, imgCorners, imgGridDisplay]
     # imgStacked = stackImages(imgArray, 1)
 
     for img in imgArray:
