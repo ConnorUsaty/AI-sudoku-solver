@@ -16,7 +16,9 @@ from imageProcessing.imageprocessing_helpers import preprocess, findContours, ge
 
 
 # Constants
-testImagePath = 'images/sudokuTestEasy.png'
+# testImagePath = 'images/sudokuTestEasy.png'
+testImagePath = 'images/sudokuTestEasy2.png'
+# testImagePath = 'images/sudokuTestMedium.jpg'
 # testImagePath = 'images/sudokuTestHard.jpg'
 height = 450
 width = 450
