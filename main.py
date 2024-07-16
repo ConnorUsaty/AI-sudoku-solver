@@ -12,12 +12,21 @@ import cv2
 import numpy as np
 
 # Import functions from imageprocessing_helpers.py
-from imageProcessing.imageprocessing_helpers import preprocess, findContours, getSudokuGridCorners, drawCorners, cropToGridOnly, getGridBoxes
+from imageProcessing.imageprocessing_helpers import preprocess, findContours, getSudokuGridCorners, drawCorners, cropToGridOnly, getGridBoxes, getPredictions
 
 
 # Constants
-# testImagePath = 'images/sudokuTestEasy.png'
-testImagePath = 'images/sudokuTestEasy2.png'
+testImagePath = 'images/sudokuTestEasy.png'
+correctGrid = [ 7, 0, 0, 0, 0, 0, 2, 0, 0,
+                4, 0, 2, 0, 0, 0, 0, 0, 3,
+                0, 0, 0, 2, 0, 1, 0, 0, 0,
+                3, 0, 0, 1, 8, 0, 0, 9, 7,
+                0, 0, 9, 0, 7, 0, 6, 0, 0,
+                6, 5, 0, 0, 3, 2, 0, 0, 1,
+                0, 0, 0, 4, 0, 9, 0, 0, 0,
+                5, 0, 0, 0, 0, 0, 1, 0, 6,
+                0, 0, 6, 0, 0, 0, 0, 0, 8 ]
+# testImagePath = 'images/sudokuTestEasy2.png'
 # testImagePath = 'images/sudokuTestMedium.jpg'
 # testImagePath = 'images/sudokuTestHard.jpg'
 height = 450
@@ -56,11 +65,21 @@ def main():
     # Load in trained digit classification model
     classification_model = tf.keras.models.load_model('classificationModel/digit_classification_model.keras')
 
+    cv2.imshow('Image', boxes[randBox])
+
+    # Classify digits to get grid
+    grid = getPredictions(boxes, classification_model)
+
+    # Check if grid matches correctGrid
+    for i in range(81):
+        if grid[i] != correctGrid[i]:
+            print(f'Incorrect grid at ({i}), expected {correctGrid[i]}, got {grid[i]}')
+
     # Display img of each step for debugging
-    imgArray = [img, imgProcessed, imgContours, imgCorners, imgGridDisplay, boxes[randBox]]
-    for img in imgArray:
-        cv2.imshow('Image', img)
-        cv2.waitKey(0)
+    # imgArray = [img, imgProcessed, imgContours, imgCorners, imgGridDisplay, boxes[randBox]]
+    # for img in imgArray:
+    #     cv2.imshow('Image', img)
+    #     cv2.waitKey(0)
 
 
 if __name__ == '__main__':
