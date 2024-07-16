@@ -77,7 +77,7 @@ def cropToGridOnly(img, corners):
 
     return imgWarp
 
-# STEP 5: Get grid boxes
+# STEP 5: Get grid boxes -> Extract individual boxes / digits
 def getGridBoxes(img):
     # Since img is cropped to grid only, each box should be approximately 1/9th of the image
     boxes = []
@@ -89,3 +89,57 @@ def getGridBoxes(img):
             boxes.append(col)
 
     return boxes
+
+
+# STEP 6: Classify digits -> Use trained model to classify digits
+def getPredictions(boxes, model):
+    grid = []
+
+    for box in boxes:
+        box = cv2.bitwise_not(box, 0) # Invert image to black background, white digit -> Needs to match MNIST training data
+
+        # cv2.imshow('1', box)
+        # cv2.waitKey(0)
+        
+        img = np.asarray(box)
+
+        # cv2.imshow('2', img)
+        # cv2.waitKey(0)
+
+        img = img[4:img.shape[0]-4, 4:img.shape[1]-4] # Remove 4 pixels from each side
+        # Remove 4 pixels from bottom and top
+        img = img[:, 4:img.shape[1]-4]
+
+
+
+
+        # cv2.imshow('3', img)
+        # cv2.waitKey(0)
+
+        img = cv2.resize(img, (28,28))
+
+        # cv2.imshow('4', img)
+        # cv2.waitKey(0)
+
+        img = img / 255
+
+        # cv2.imshow('5', img)
+        # cv2.waitKey(0)
+
+        img = img.reshape(1, 28, 28, 1)
+
+        # cv2.imshow('6', img)
+        # cv2.waitKey(0)
+
+        predictions = model.predict(img)
+
+        classIndex = np.argmax(predictions, axis=-1)
+        probabilityValue = np.amax(predictions)
+        print(classIndex, probabilityValue)
+
+        if probabilityValue > 0.8:
+            grid.append(classIndex[0])
+        else:
+            grid.append(0)
+
+    return grid
