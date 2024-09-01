@@ -1,2 +1,11 @@
 # Ignore all __pycache__ directories
 **/__pycache__/
+
+# Ignore all .pyc files
+**/*.pyc
+
+# Ignore training images
+classificationModel/trainingImages
+
+# Ignore test images
+/testImages
