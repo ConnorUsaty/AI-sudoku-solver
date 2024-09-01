@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import operator
+import math
 
 
 # Constants
@@ -11,14 +12,10 @@ width = 450
 # STEP 1: Preprocess image
 def preprocess(img):
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Convert to grayscale
-    imgBlur = cv2.GaussianBlur(imgGray, (9,9), 0) # Apply Gaussian blur -> Remove noise
-    imgThreshold = cv2.adaptiveThreshold(imgBlur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2) # Apply adaptive threshold -> Make everything black or white based on above or below threshold
-    imgInv = cv2.bitwise_not(imgThreshold, 0) # Invert image -> Black background, white gridlines
-    imgKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2,2)) # Get a rectangular kernel
-    imgMorph = cv2.morphologyEx(imgInv, cv2.MORPH_OPEN, imgKernel) # Apply morphological transformation
-    imgFinal = cv2.dilate(imgMorph, imgKernel, iterations=1) # Dilate image -> Fill in gaps and make lines bolder
+    imgThreshold = cv2.adaptiveThreshold(imgGray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2) # Apply adaptive threshold -> Make everything black or white based on above or below threshold
+    imgInv = cv2.bitwise_not(imgThreshold, 0) # Invert image -> Black background, white gridlines and numbers
 
-    return imgFinal
+    return imgInv
 
 # STEP 2: Find contours
 def findContours(img):
@@ -39,9 +36,12 @@ def getCorners(polygon, limit_fn, compare_fn):
 def drawCorners(pts, original):
     cv2.circle(original, pts, 7, (0, 255, 0), cv2.FILLED)
 
+def distance(p1, p2):
+    return math.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
 # STEP 3: Find sudoku grid corners -> Find largest square contour and get its corners
 def getSudokuGridCorners(contours):
-    gridCorners = None
+    gridCorners = []
 
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
     
@@ -50,6 +50,8 @@ def getSudokuGridCorners(contours):
         perimeter = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, 0.02*perimeter, True)
         num_sides = len(approx)
+        if area > 500:
+            print(f"{area = }, {num_sides = }")
 
         # If contour has 4 sides and area > 1000, it's likely the sudoku grid -> Check if it's a square to confirm
         if num_sides == 4 and area > 1000:
@@ -57,15 +59,22 @@ def getSudokuGridCorners(contours):
             top_right = getCorners(contour, max, np.subtract)  # has largest (x - y) value
             bot_left = getCorners(contour, min, np.subtract)  # has smallest (x - y) value
             bot_right = getCorners(contour, max, np.add)  # has largest (x + y) value
-            
-            # Check if the contour is a square -> 10% tolerance
-            if (0.90 < ((top_right[0] - top_left[0]) / (bot_right[1] - top_right[1])) < 1.10):
+
+            print(f"{top_left = }, {top_right = }, {bot_left = }, {bot_right = }")
+
+            # Check if the sides are approximately equal
+            topSide = distance(top_left, top_right)
+            leftSide = distance(top_left, bot_left)
+            rightSide = distance(top_right, bot_right)
+            bottomSide = distance(bot_left, bot_right)
+
+            print(f"{topSide = }, {leftSide = }, {rightSide = }, {bottomSide = }")
+
+            # Check if opposite sides are approximately equal -> Some sudoku images may not be perfect squares (Some may even be rectangles)
+            if abs(topSide - bottomSide) < 10 and abs(leftSide - rightSide) < 10:
                 gridCorners = [top_left, top_right, bot_right, bot_left]
                 break
-        
-    if gridCorners is None:
-        return []
-    
+
     return gridCorners
 
 # STEP 4: Crop to grid only
@@ -94,52 +103,12 @@ def getGridBoxes(img):
 # STEP 6: Classify digits -> Use trained model to classify digits
 def getPredictions(boxes, model):
     grid = []
-
     for box in boxes:
-        box = cv2.bitwise_not(box, 0) # Invert image to black background, white digit -> Needs to match MNIST training data
-
-        # cv2.imshow('1', box)
-        # cv2.waitKey(0)
-        
-        img = np.asarray(box)
-
-        # cv2.imshow('2', img)
-        # cv2.waitKey(0)
-
-        img = img[4:img.shape[0]-4, 4:img.shape[1]-4] # Remove 4 pixels from each side
-        # Remove 4 pixels from bottom and top
-        img = img[:, 4:img.shape[1]-4]
-
-
-
-
-        # cv2.imshow('3', img)
-        # cv2.waitKey(0)
-
-        img = cv2.resize(img, (28,28))
-
-        # cv2.imshow('4', img)
-        # cv2.waitKey(0)
-
-        img = img / 255
-
-        # cv2.imshow('5', img)
-        # cv2.waitKey(0)
-
+        img = cv2.resize(box, (28,28))
+        img = img / 255.0
         img = img.reshape(1, 28, 28, 1)
-
-        # cv2.imshow('6', img)
-        # cv2.waitKey(0)
-
-        predictions = model.predict(img)
-
-        classIndex = np.argmax(predictions, axis=-1)
-        probabilityValue = np.amax(predictions)
-        print(classIndex, probabilityValue)
-
-        if probabilityValue > 0.8:
-            grid.append(classIndex[0])
-        else:
-            grid.append(0)
-
+        prediction = model.predict(img)
+        classIndex = np.argmax(prediction, axis=-1)
+        grid.append(classIndex[0])
+            
     return grid
