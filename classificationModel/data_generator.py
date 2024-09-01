@@ -27,7 +27,7 @@ def create_text_image(text, font_path, font_size=32, rotation=0, noise_level=0):
 
 
 def main():
-    # Use 5 popular fonts for generating images
+    # Use 5 popular fonts for suduko puzzles
     popular_fonts = [
         'arial.ttf',
         'times.ttf',
@@ -35,17 +35,19 @@ def main():
         'georgia.ttf',
         'comic.ttf',
     ]
-    # Use a few different angles and noise levels for variation
+    # Use a large variety of different angles and noise levels for training data
     angles = [i for i in range(-15, 16)]
     noise_levels = [i for i in range(0, 16)]
 
     # Generate and save images for numbers 1-9 in each font with specified angles and noise levels
+    # Don't need to generate images for 0 since it will be used to represent empty cells
     for font in popular_fonts:
         for i in tqdm(range(1, 10), desc=f'Generating images for {font}'):
             for angle in angles:
                 for noise_level in noise_levels:
                     img = create_text_image(str(i), font, rotation=angle, noise_level=noise_level)
 
+                    # Save image with appropriate name (No dashes allowed in file names)
                     if angle < 0:
                         angle_str = "neg" + str(abs(angle))
                     else:
