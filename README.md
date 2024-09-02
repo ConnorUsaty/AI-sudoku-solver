@@ -8,8 +8,8 @@ An application that:
 - Solves the sudoku
 - Displays solved sudoku for user
 ## Current Features:
-- Acheived **99.91% Validation Accuracy** and **0.3% Validation Loss**
-- CNN trained on 213,000 unique generated images from data generation script
+- CNN model acheived **99.96% Validation Accuracy** and **0.13% Validation Loss**
+- CNN model is trained on 213,000 unique generated images from data generation script
 - Data generation script to easily generate more unique and realistic training data for the CNN
 - Extremely fast McGill sudoku solver algorithm
 - OpenCV image processing to extract soduko grid from the image and each individual box from the grid
