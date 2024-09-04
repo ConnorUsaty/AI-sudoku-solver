@@ -16,7 +16,6 @@ An application that:
 ## To-Do List:
 - Implement OpenCV's video capture abilities to scan for pictures from a real-time video stream
 - Acheive a validation accuracy of 100% (Most common error is 7s misclassified as 1s)
-- Test more model architectures and methods of training data generation to acheive above
-- Optimize prediction speed when using model within application
+- Test more model architectures and custom datasets to acheive above
 - Develop Batch script to easily run locally
 - Develop React.JS front end to easily host online
