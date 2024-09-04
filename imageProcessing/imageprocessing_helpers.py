@@ -12,11 +12,11 @@ WIDTH: Final[int] = 450
 
 # STEP 1: Preprocess image
 def preprocess(img):
-    imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Convert to grayscale
-    imgThreshold = cv2.adaptiveThreshold(imgGray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2) # Apply adaptive threshold -> Make everything black or white based on above or below threshold
-    imgInv = cv2.bitwise_not(imgThreshold, 0) # Invert image -> Black background, white gridlines and numbers
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # Convert to grayscale
+    img_threshold = cv2.adaptiveThreshold(img_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2) # Apply adaptive threshold -> Make everything black or white based on above or below threshold
+    img_inv = cv2.bitwise_not(img_threshold, 0) # Invert image -> Black background, white gridlines and numbers
 
-    return imgInv
+    return img_inv
 
 
 # STEP 2: Find contours
@@ -44,17 +44,15 @@ def distance(p1, p2):
 
 # STEP 3: Find sudoku grid corners -> Find largest square contour and get its corners
 def getSudokuGridCorners(contours):
-    gridCorners = []
+    grid_corners = []
 
+    # Sort contours by area in descending order -> Grid contour is likely to be one of the largest contours
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
-    
     for contour in contours:
         area = cv2.contourArea(contour)
         perimeter = cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, 0.02*perimeter, True)
         num_sides = len(approx)
-        if area > 500:
-            print(f"{area = }, {num_sides = }")
 
         # If contour has 4 sides and area > 1000, it's likely the sudoku grid -> Check if it's a square to confirm
         if num_sides == 4 and area > 1000:
@@ -63,19 +61,18 @@ def getSudokuGridCorners(contours):
             bot_left = getCorners(contour, min, np.subtract)  # has smallest (x - y) value
             bot_right = getCorners(contour, max, np.add)  # has largest (x + y) value
 
-            # Check if the sides are approximately equal
-            topSide = distance(top_left, top_right)
-            leftSide = distance(top_left, bot_left)
-            rightSide = distance(top_right, bot_right)
-            bottomSide = distance(bot_left, bot_right)
+            top_side = distance(top_left, top_right)
+            left_side = distance(top_left, bot_left)
+            right_side = distance(top_right, bot_right)
+            bottom_side = distance(bot_left, bot_right)
 
             # Check if opposite sides are approximately equal -> Some sudoku images may not be perfect squares (Some may even be rectangles)
-            if ((abs(topSide - bottomSide) < 10) and (abs(leftSide - rightSide) < 10)
-                 and (topSide / leftSide) > 0.6 and (topSide / leftSide) < 1.4): # Check if it's a square with large tolerance but not large enough to get non-grid rectangles
-                    gridCorners = [top_left, top_right, bot_right, bot_left]
+            if ((abs(top_side - bottom_side) < 10) and (abs(left_side - right_side) < 10)
+                 and (top_side / left_side) > 0.6 and (top_side / left_side) < 1.4): # Check if it's a square with large tolerance but not large enough to get non-grid rectangles
+                    grid_corners = [top_left, top_right, bot_right, bot_left]
                     break
 
-    return gridCorners
+    return grid_corners
 
 
 # STEP 4: Crop to grid only
@@ -83,9 +80,9 @@ def cropToGridOnly(img, corners):
     pts1 = np.float32(corners)
     pts2 = np.float32([[0,0], [WIDTH,0], [WIDTH,HEIGHT], [0,HEIGHT]])
     matrix = cv2.getPerspectiveTransform(pts1, pts2)
-    imgWarp = cv2.warpPerspective(img, matrix, (WIDTH, HEIGHT))
+    img_warp = cv2.warpPerspective(img, matrix, (WIDTH, HEIGHT))
 
-    return imgWarp
+    return img_warp
 
 
 # STEP 5: Get grid boxes -> Extract individual boxes / digits
@@ -104,24 +101,22 @@ def getGridBoxes(img):
 
 # STEP 6: Classify digits -> Use trained model to classify digits
 def getPredictions(boxes, model):
-    grid = []
-    for box in boxes:
-        img = cv2.resize(box, (28,28))
-        img = img / 255.0
-        img = img.reshape(1, 28, 28, 1)
-        prediction = model.predict(img)
-        classIndex = np.argmax(prediction, axis=-1)
-        grid.append(classIndex[0])
-            
-    return grid
+    # Prep boxes for classification -> Resize to 28x28, normalize, reshape to input layer shape
+    boxes = np.array([cv2.resize(box, (28, 28)) for box in boxes])
+    boxes = boxes / 255.0
+    boxes = boxes.reshape(-1, 28, 28, 1)
+
+    batch_size = 81 # Set batch size to 81 to classify all 81 sudoku boxes at once
+    predictions = model.predict(boxes, batch_size=batch_size) # Get predictions for all boxes at once
+
+    return [np.argmax(prediction) for prediction in predictions] # Return the digit with the highest probability for each box
 
 
 # STEP 7: Draw solution on image
 def drawSolution(warped_img, solved_puzzle, squares_processed):
     warped_img = cv2.bitwise_not(warped_img, 0) # Turn image back to black background, white text
-
     width = warped_img.shape[0] // 9
-    img_w_text = warped_img
+    img_solution = warped_img
 
     index = 0
     for j in range(9):
@@ -138,4 +133,4 @@ def drawSolution(warped_img, solved_puzzle, squares_processed):
                             text_origin, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             index += 1
 
-    return img_w_text
+    return img_solution
