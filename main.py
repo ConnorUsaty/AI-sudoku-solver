@@ -22,10 +22,10 @@ from sudokuSolver.sudoku_solver import solverWrapper
 # testImagePath = 'testImages/sudokuTestEasy2.png' # 80/81 correct -> 98.77% accuracy, 7 misclassified as 1
 # testImagePath = 'testImages/sudokuTestEasy3.jpg' # 80/81 correct -> 98.77% accuracy, 7 misclassified as 1
 # testImagePath = 'testImages/1.jpg' # 81/81 correct -> 100% accuracy
-testImagePath = 'testImages/2.jpg' # 81/81 correct -> 100% accuracy
+# testImagePath = 'testImages/2.jpg' # 81/81 correct -> 100% accuracy
 # testImagePath = 'testImages/3.jpg' # 81/81 correct -> 100% accuracy
 # testImagePath = 'testImages/4.jpg' # 81/81 correct -> 100% accuracy
-# testImagePath = 'testImages/5.jpg' # 81/81 correct -> 100% accuracy
+testImagePath = 'testImages/5.jpg' # 81/81 correct -> 100% accuracy
 # testImagePath = 'testImages/screenCropped.png' # Can't find sudoku grid
 # testImagePath = 'testImages/sudoku.jpg' # Can't find sudoku grid
 HEIGHT: Final[int] = 450
@@ -59,10 +59,11 @@ def main():
     grid = getPredictions(boxes, classification_model) # Classify digits to get grid
 
     # Solve sudoku; Returns error message in solution and time = None if no solution found
-    solution, time = solverWrapper(grid)
+    solution, solve_time = solverWrapper(grid)
 
-    if time is not None:
+    if solve_time is not None:
         solvedGrid = drawSolution(imgGridOnly, solution, grid)
+        print(f"Time taken: {solve_time}")
         cv2.imshow('Image', solvedGrid)
         cv2.waitKey(0)
     else:
