@@ -3,10 +3,10 @@
 # Ignore all .pyc files
 **/*.pyc
 
-# Ignore training images
+# Ignore image files
 classificationModel/trainingImages
-# Ignore test images
 /testImages
+/labelledImages
 
 # Ignore venv files
 venv/
