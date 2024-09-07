@@ -72,7 +72,7 @@ def getSudokuGridCorners(contours):
 
             # Check if opposite sides are approximately equal -> Some sudoku images may not be perfect squares (Some may even be rectangles)
             if ((abs(top_side - bottom_side) < 10) and (abs(left_side - right_side) < 10)
-                 and (top_side / left_side) > 0.6 and (top_side / left_side) < 1.4): # Check if it's a square with large tolerance but not large enough to get non-grid rectangles
+                 and (top_side / left_side) > 0.65 and (top_side / left_side) < 1.35): # Check if it's a square with large tolerance but not large enough to get non-grid rectangles
                     grid_corners = [top_left, top_right, bot_right, bot_left]
                     break
 
