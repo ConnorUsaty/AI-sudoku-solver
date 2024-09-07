@@ -19,15 +19,36 @@ def create_text_image(text, font_path, font_size=24, rotation=0, noise_level=0):
     else:
         image = Image.new('L', (28, 28), color=0)
 
+    # Apply randomization
+    image = applyRotation(image, rotation)
+    image = applyNoise(image, noise_level)
+    image = generateRandomBorders(image)
+    return image
+
+
+def applyRotation(image, rotation):
     # Apply rotation
     if rotation != 0:
         image = image.rotate(rotation, expand=1, fillcolor=0)
         image = ImageOps.fit(image, (28, 28), method=0, bleed=0.0, centering=(0.5, 0.5))
+    return image
+
+
+def applyNoise(image, noise_level):
+    # Apply noise
+    if noise_level != 0:
+        noise = np.random.randint(0, noise_level, (28, 28), dtype='uint8')
+        noise_image = Image.fromarray(noise, mode='L')
+        image = ImageChops.add(image, noise_image)
+    return image
+
+
+def generateRandomBorders(image):
+    image = np.array(image)
 
     # Randomly add white borders to simulate sudoku grid lines on edge of image
     border_sides = random.sample(['top', 'bottom', 'left', 'right'], random.randint(1, 4))
     border_width = random.randint(1, 5)  # Random border width between 1 and 4 pixels
-    image = np.array(image)
     if 'top' in border_sides:
         image[:border_width, :] = 255
     if 'bottom' in border_sides:
@@ -36,14 +57,8 @@ def create_text_image(text, font_path, font_size=24, rotation=0, noise_level=0):
         image[:, :border_width] = 255
     if 'right' in border_sides:
         image[:, -border_width:] = 255
+
     image = Image.fromarray(image)
-    
-    # Apply noise
-    if noise_level != 0:
-        noise = np.random.randint(0, noise_level, (28, 28), dtype='uint8')
-        noise_image = Image.fromarray(noise, mode='L')
-        image = ImageChops.add(image, noise_image)
-    
     return image
 
 
