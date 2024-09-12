@@ -1,12 +1,9 @@
 import cv2
-import tensorflow as tf
 from typing import Final
 import os
 
 # Import functions from imageprocessing_helpers.py
-from imageProcessing.imageprocessing_helpers import preprocess, findContours, getSudokuGridCorners, drawCorners, cropToGridOnly, getGridBoxes, getPredictions, drawSolution
-# Import functions from sudoku_solver.py
-from sudokuSolver.sudoku_solver import solverWrapper
+from imageProcessing.imageprocessing_helpers import preprocess, findContours, getSudokuGridCorners, cropToGridOnly, getGridBoxes
 
 # Constants
 HEIGHT: Final[int] = 450
@@ -34,7 +31,6 @@ def processAndLabel(testImagePath):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
         label = input("Enter label: ")
-        # cv2.save(f"labelledImages/{testImagePath.split('/')[1]}_{label}_{i}", boxes[i])
         cv2.imwrite(f"labelledImages/{testImagePath.split('/')[1]}_{label}_{i}.png", boxes[i])
 
 

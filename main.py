@@ -9,7 +9,7 @@ from sudokuSolver.sudoku_solver import solverWrapper
 
 
 # Constants
-# testImagePath = 'testImages/sudokuTestEasy.png' # 72/81 correct -> 88.89% accuracy
+# testImagePath = 'testImages/sudokuTestEasy.png' # 81/81 correct -> 100% accuracy
 # correctGrid = [ 7, 0, 0, 0, 0, 0, 2, 0, 0,
 #                 4, 0, 2, 0, 0, 0, 0, 0, 3,
 #                 0, 0, 0, 2, 0, 1, 0, 0, 0,
@@ -19,13 +19,13 @@ from sudokuSolver.sudoku_solver import solverWrapper
 #                 0, 0, 0, 4, 0, 9, 0, 0, 0,
 #                 5, 0, 0, 0, 0, 0, 1, 0, 6,
 #                 0, 0, 6, 0, 0, 0, 0, 0, 8 ]
-# testImagePath = 'testImages/sudokuTestEasy2.png' # 80/81 correct -> 98.77% accuracy, 7 misclassified as 1
+testImagePath = 'testImages/sudokuTestEasy2.png' # 80/81 correct -> 98.77% accuracy, 7 misclassified as 1
 # testImagePath = 'testImages/sudokuTestEasy3.jpg' # 80/81 correct -> 98.77% accuracy, 7 misclassified as 1
 # testImagePath = 'testImages/1.jpg' # 81/81 correct -> 100% accuracy
 # testImagePath = 'testImages/2.jpg' # 81/81 correct -> 100% accuracy
 # testImagePath = 'testImages/3.jpg' # 81/81 correct -> 100% accuracy
 # testImagePath = 'testImages/4.jpg' # 81/81 correct -> 100% accuracy
-testImagePath = 'testImages/5.jpg' # 81/81 correct -> 100% accuracy
+# testImagePath = 'testImages/5.jpg' # 81/81 correct -> 100% accuracy
 # testImagePath = 'testImages/screenCropped.png' # Can't find sudoku grid
 # testImagePath = 'testImages/sudoku.jpg' # Can't find sudoku grid
 HEIGHT: Final[int] = 450
@@ -55,7 +55,7 @@ def main():
     boxes = getGridBoxes(imgGridOnly) # Get individual boxes of grid
 
     # Load in trained digit classification model
-    classification_model = tf.keras.models.load_model('classificationModel/generated_digit_classification_model.keras')
+    classification_model = tf.keras.models.load_model('classificationModel/modified_digit_dense_128_64_classification_model.keras')
     grid = getPredictions(boxes, classification_model) # Classify digits to get grid
 
     # Solve sudoku; Returns error message in solution and time = None if no solution found
@@ -70,15 +70,15 @@ def main():
         print(f"{solution}") # Contains error message if no solution found
 
 
-    # # Check if grid matches correctGrid
-    # wrong = 0
-    # for i in range(81):
-    #     # if grid[i] != correctGrid[i]:
-    #     #     wrong += 1
-    #         print(f'Grid at ({i}), got {grid[i]}')
-    #         cv2.imshow('Image', boxes[i])
-    #         cv2.waitKey(0)
-    # print( f'Wrong: {wrong} / 81, Accuracy: {100 - (wrong / 81) * 100}%')
+    # Check if grid matches correctGrid
+    wrong = 0
+    for i in range(81):
+        # if grid[i] != correctGrid[i]:
+        #     wrong += 1
+            print(f'Grid at ({i}), got {grid[i]}')
+            cv2.imshow('Image', boxes[i])
+            cv2.waitKey(0)
+    print( f'Wrong: {wrong} / 81, Accuracy: {100 - (wrong / 81) * 100}%')
 
 
 if __name__ == '__main__':
